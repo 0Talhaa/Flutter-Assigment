@@ -155,7 +155,7 @@ class _SignupPageState extends State<SignupPage> {
 
   var users = FirebaseFirestore.instance.collection("users");
 
-  Future<void> signup() async {
+  Future<void> signup() async { 
     try {
       final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
