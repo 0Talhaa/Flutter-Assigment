@@ -1,5 +1,7 @@
 import 'package:assigment/addProduct.dart';
+import 'package:assigment/admin.dart';
 import 'package:assigment/authentication.dart';
+import 'package:assigment/productdetial.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,7 +35,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: BottomNavBar(),
       routes: {
-        '/home': (context) => MyApp(), // Ensure this route is set
+        '/home': (context) => MyApp(), 
+          '/adminPanel': (context) => AdminPanel(),
+          // '/': (context) => LoginPage()
       },
     );
   }
@@ -210,6 +214,7 @@ class _HomepageState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       var product = snapshot.data!.docs[index];
                       return _premiumProductCard(
+                        context,
                         product['Title'],
                         product['Price'].toString(),
                         product['Picture'],
@@ -227,7 +232,7 @@ class _HomepageState extends State<HomeScreen> {
   }
 }
 
-Widget _premiumProductCard(String title, String price, String imageUrl, String color, ) {
+Widget _premiumProductCard(BuildContext context, String title, String price, String imageUrl, String color) {
   return Container(
     width: 170,
     margin: const EdgeInsets.only(right: 16),
@@ -305,7 +310,17 @@ Widget _premiumProductCard(String title, String price, String imageUrl, String c
                     elevation: 3,
                   ),
                   onPressed: () {
-                    // Navigate to product details page
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PremiumProductPage(
+                          title: title,
+                          price: price,
+                          imageUrl: imageUrl,
+                          color: color,
+                        ),
+                      ),
+                    );
                   },
                   child: const Text('View Details', style: TextStyle(fontSize: 14)),
                 ),

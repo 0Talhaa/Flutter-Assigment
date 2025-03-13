@@ -141,6 +141,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+
 class SignupPage extends StatefulWidget {
   @override
   _SignupPageState createState() => _SignupPageState();
@@ -154,45 +155,54 @@ class _SignupPageState extends State<SignupPage> {
 
   var users = FirebaseFirestore.instance.collection("users");
 
-  signup() async {
-  try {
-    final credential =
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: emailController.text,
-      password: passwordController.text,
-    );
-    await users.add({
-      'email': emailController.text,
-      'password': passwordController.text,
-      'username': usernameController.text,
-      'id': credential.user?.uid,
-    });
+  Future<void> signup() async {
+    try {
+      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
 
-    print("User created successfully");
+      String uid = credential.user?.uid ?? "";
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text("User Created Successfully."),
-    ));
+      // Save user details in Firestore (in the 'users' collection)
+      await users.doc(uid).set({
+        'id': uid,
+        'email': emailController.text.trim(),
+        'password': passwordController.text.trim(),
+        'username': usernameController.text.trim(),
+      });
 
-    // Navigate to MyApp (or your main/home screen)
-    Navigator.pushReplacementNamed(context, '/home'); // Replace '/home' with your actual home route
+      // Save user details locally using SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('id', uid);
+      await prefs.setString('email', emailController.text.trim());
+      await prefs.setString('username', usernameController.text.trim());
 
-  } on FirebaseAuthException catch (e) {
-    if (e.code == 'weak-password') {
-      print('The password provided is too weak.');
+      print("User created successfully");
+
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("The password provided is too weak."),
+        content: Text("User Created Successfully."),
       ));
-    } else if (e.code == 'email-already-in-use') {
-      print('The account already exists for that email.');
+
+      // Navigate to Home Screen
+      Navigator.pushReplacementNamed(context, '/home');
+
+    } on FirebaseAuthException catch (e) {
+      String errorMsg = "An error occurred";
+      if (e.code == 'weak-password') {
+        errorMsg = "The password provided is too weak.";
+      } else if (e.code == 'email-already-in-use') {
+        errorMsg = "The account already exists for that email.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg)));
+    } catch (e) {
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("The account already exists for that email."),
+        content: Text("Something went wrong. Please try again."),
       ));
     }
-  } catch (e) {
-    print(e);
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -226,8 +236,7 @@ class _SignupPageState extends State<SignupPage> {
                     filled: true,
                     fillColor: Colors.white,
                     hintText: "Full Name",
-                    prefixIcon:
-                        Icon(Icons.person, color: Colors.purple.shade900),
+                    prefixIcon: Icon(Icons.person, color: Colors.purple.shade900),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -241,8 +250,7 @@ class _SignupPageState extends State<SignupPage> {
                     filled: true,
                     fillColor: Colors.white,
                     hintText: "Email",
-                    prefixIcon:
-                        Icon(Icons.email, color: Colors.purple.shade900),
+                    prefixIcon: Icon(Icons.email, color: Colors.purple.shade900),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -281,13 +289,18 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                    onPressed: () {
-                      signup();
-                    },
-                    child: const Text("Register")),
-                const SizedBox(
-                  height: 20,
+                  onPressed: signup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.purple.shade900,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 15),
+                  ),
+                  child: const Text("Register", style: TextStyle(fontSize: 18)),
                 ),
+                const SizedBox(height: 20),
                 GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/login'),
                   child: const Text("Already a user? Login Now"),
@@ -295,7 +308,7 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 15),
                 TextButton(
                   onPressed: () {
-                    Navigator.pop(context); // Navigate back to login page
+                    Navigator.pop(context);
                   },
                   child: const Text(
                     "Already have an account? Login",

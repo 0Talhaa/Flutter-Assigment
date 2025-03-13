@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart'; // To format current time
 
 class AddProduct extends StatefulWidget {
   const AddProduct({super.key});
@@ -17,9 +18,12 @@ class _AddProductState extends State<AddProduct> {
   final TextEditingController _stockController = TextEditingController();
   final TextEditingController _colorController = TextEditingController();
   File? _image;
+  String? _imageUrl;
+  String? _imageTime; // To store the current time when image is selected
 
   final CollectionReference products =
       FirebaseFirestore.instance.collection('Products');
+  TextEditingController urlController = TextEditingController();
 
   Future<void> addProduct() async {
     String title = _titleController.text.trim();
@@ -29,7 +33,6 @@ class _AddProductState extends State<AddProduct> {
 
     if (title.isNotEmpty &&
         price.isNotEmpty &&
-        _image != null &&
         stock.isNotEmpty &&
         color.isNotEmpty) {
       await products.add({
@@ -37,8 +40,9 @@ class _AddProductState extends State<AddProduct> {
         'Price': double.tryParse(price) ?? 0.0,
         'Stock': int.tryParse(stock) ?? 0,
         'Color': color,
-        'Like': false,
-        'Picture': 'Uploaded Image Placeholder',
+        'Picture': _imageUrl ?? '', // Use the URL from the user input or image
+        'Timestamp':
+            _imageTime ?? '', // Store the time when the image was selected
       });
 
       _showSuccessDialog();
@@ -49,6 +53,8 @@ class _AddProductState extends State<AddProduct> {
       _colorController.clear();
       setState(() {
         _image = null;
+        _imageUrl = null;
+        _imageTime = null; // Reset the image and timestamp
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +72,11 @@ class _AddProductState extends State<AddProduct> {
         content: const Text('Your product has been added successfully.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context); // Close the dialog
+              Navigator.pushReplacementNamed(
+                  context, '/home'); // Navigate to main.dart
+            },
             child: const Text('OK'),
           ),
         ],
@@ -82,14 +92,12 @@ class _AddProductState extends State<AddProduct> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.image,
-                  color: Color.fromARGB(255, 241, 217, 145)),
+              leading: const Icon(Icons.image),
               title: const Text('Upload from Gallery'),
               onTap: () => _pickImage(ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.link,
-                  color: Color.fromARGB(255, 240, 216, 143)),
+              leading: const Icon(Icons.link),
               title: const Text('Use Online Image URL'),
               onTap: () {
                 Navigator.pop(context);
@@ -106,14 +114,16 @@ class _AddProductState extends State<AddProduct> {
     final pickedFile = await ImagePicker().pickImage(source: source);
     if (pickedFile != null) {
       setState(() {
-        _image = File(pickedFile.path);
+        _image = File(pickedFile.path); // Store the selected image
+        _imageUrl = null; // Reset the URL if a new image is picked
+        _imageTime = DateFormat('yyyy-MM-dd HH:mm:ss')
+            .format(DateTime.now()); // Get current time
       });
     }
-    Navigator.pop(context);
+    Navigator.pop(context); // Close the bottom sheet
   }
 
   Future<void> _showImageUrlDialog() async {
-    TextEditingController urlController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -130,7 +140,11 @@ class _AddProductState extends State<AddProduct> {
           TextButton(
             onPressed: () {
               setState(() {
-                _image = null;
+                _imageUrl =
+                    urlController.text; // Save the URL entered by the user
+                _image = null; // Clear selected image if URL is used
+                _imageTime = DateFormat('yyyy-MM-dd HH:mm:ss')
+                    .format(DateTime.now()); // Set the current time
               });
               Navigator.pop(context);
             },
@@ -149,7 +163,7 @@ class _AddProductState extends State<AddProduct> {
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color.fromARGB(255, 241, 216, 140)),
+        prefixIcon: Icon(icon),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -164,27 +178,19 @@ class _AddProductState extends State<AddProduct> {
           style: GoogleFonts.poppins(
               fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
         ),
-        backgroundColor: const Color.fromARGB(255, 243, 214, 125),
+        backgroundColor: Colors.blueGrey, // Simple blue-grey color
         centerTitle: true,
-        elevation: 8,
-        shadowColor: const Color.fromARGB(255, 241, 213, 126).withOpacity(0.5),
+        elevation: 4,
       ),
       body: Container(
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color.fromARGB(255, 245, 219, 143), Colors.brown],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: Colors.grey[200], // Light grey background color
         child: Center(
           child: SingleChildScrollView(
             child: Card(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
-              elevation: 15,
-              shadowColor: Colors.black45,
+              elevation: 8,
               color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -212,28 +218,35 @@ class _AddProductState extends State<AddProduct> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: const Color.fromARGB(255, 243, 217, 137),
-                              width: 2),
-                          color: Colors.grey[200],
+                            color: Colors.grey, // Simple border color
+                            width: 2,
+                          ),
+                          color: Colors.grey[300], // Light grey background
                         ),
                         child: _image == null
-                            ? const Icon(Icons.add_a_photo,
-                                size: 50, color: Colors.amber)
+                            ? _imageUrl == null
+                                ? const Icon(Icons.add_a_photo,
+                                    size: 50, color: Colors.grey)
+                                : Image.network(_imageUrl!, fit: BoxFit.cover)
                             : Image.file(_image!, fit: BoxFit.cover),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    if (_imageTime != null)
+                      Text(
+                        'Image uploaded at: $_imageTime',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: addProduct,
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            const Color.fromARGB(255, 233, 205, 122),
+                            Colors.blueGrey, // Simple blue-grey color
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 15),
-                        elevation: 12,
-                        shadowColor: const Color.fromARGB(255, 236, 211, 135)
-                            .withOpacity(0.6),
+                        elevation: 6,
                       ),
                       child: const Text(
                         '➕ Add Product',
