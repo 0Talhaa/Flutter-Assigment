@@ -33,11 +33,12 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home: BottomNavBar(),
+      home: AdminPanel(),
       routes: {
         '/home': (context) => MyApp(), 
           '/adminPanel': (context) => AdminPanel(),
-          // '/': (context) => LoginPage()
+          '/signup': (context) => SignupPage(),
+          '/login': (context) => LoginPage(),
       },
     );
   }
@@ -232,7 +233,7 @@ class _HomepageState extends State<HomeScreen> {
   }
 }
 
-Widget _premiumProductCard(BuildContext context, String title, String price, String imageUrl, String color) {
+Widget _premiumProductCard(BuildContext context, String title, String price, String imageUrl, String color,  ) {
   return Container(
     width: 170,
     margin: const EdgeInsets.only(right: 16),
@@ -318,6 +319,9 @@ Widget _premiumProductCard(BuildContext context, String title, String price, Str
                           price: price,
                           imageUrl: imageUrl,
                           color: color,
+                           productDescription: null, 
+                           productStock: null,
+                           
                         ),
                       ),
                     );

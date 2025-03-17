@@ -11,7 +11,7 @@ class PremiumProductPage extends StatelessWidget {
     required this.title,
     required this.price,
     required this.imageUrl,
-    required this.color,
+    required this.color, required productDescription, required productStock,
   });
 
   @override
