@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
-      home: AdminPanel(),
+      home: BottomNavBar(),
       routes: {
         '/home': (context) => MyApp(), 
           '/adminPanel': (context) => AdminPanel(),

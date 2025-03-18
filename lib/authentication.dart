@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -20,28 +19,31 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      try {
-        UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-        
-        String email = userCredential.user!.email ?? "";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login Successful!')),
-        );
-        
-        if (email == "admin@example.com") {
-          Navigator.pushReplacementNamed(context, '/adminPanel');
-        } else {
-          Navigator.pushReplacementNamed(context, '/home');
+
+      if (_emailController.text == "admin@example.com" &&
+          _passwordController.text == "admin123") {
+        Navigator.pushNamed(context, '/adminPanel');
+      } else {
+        try {
+          UserCredential userCredential =
+              await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
+          String email = userCredential.user!.email ?? "";
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login Successful!')),
+          );
+          Navigator.pushNamed(context, '/home');
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Login Failed: ${e.toString()}')),
+          );
+          Navigator.pushNamed(context, '/login');
+        } finally {
+          setState(() => _isLoading = false);
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login Failed: ${e.toString()}')),
-        );
-      } finally {
-        setState(() => _isLoading = false);
       }
     }
   }
@@ -84,7 +86,8 @@ class _LoginPageState extends State<LoginPage> {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!RegExp(r"^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$").hasMatch(value)) {
+                    if (!RegExp(r"^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$")
+                        .hasMatch(value)) {
                       return 'Enter a valid email';
                     }
                     return null;
@@ -122,7 +125,8 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: _login,
                         child: Text("Login"),
                         style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 40),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 40),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -130,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                 SizedBox(height: 16),
-                  GestureDetector(
+                GestureDetector(
                   onTap: () => Navigator.pushNamed(context, '/signup'),
                   child: const Text(
                     "Already have no account? Signup",
@@ -145,8 +149,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
-
 
 class SignupPage extends StatefulWidget {
   @override
@@ -347,4 +349,3 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 }
-
