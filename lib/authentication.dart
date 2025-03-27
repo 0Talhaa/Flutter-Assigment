@@ -16,37 +16,56 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+Future<void> _login() async {
+  if (_formKey.currentState!.validate()) {
+    setState(() => _isLoading = true);
 
-      if (_emailController.text == "admin@example.com" &&
-          _passwordController.text == "admin123") {
-        Navigator.pushNamed(context, '/adminPanel');
-      } else {
-        try {
-          UserCredential userCredential =
-              await FirebaseAuth.instance.signInWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+    try {
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-          String email = userCredential.user!.email ?? "";
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login Successful!')),
-          );
-          Navigator.pushNamed(context, '/home');
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login Failed: ${e.toString()}')),
-          );
-          Navigator.pushNamed(context, '/login');
-        } finally {
-          setState(() => _isLoading = false);
+      String uid = userCredential.user!.uid;
+
+      DocumentSnapshot userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (userDoc.exists) {
+        String userName = userDoc['username'] ?? "Unknown";
+        String userEmail = userDoc['email'] ?? "No Email";
+        String userRole = userDoc['role'] ?? "user"; // Fetch user role
+
+        print("User Name: $userName");
+        print("User Email: $userEmail");
+        print("User Role: $userRole");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Welcome, $userName ($userEmail)')),
+        );
+
+        // Redirect based on user role
+        if (userRole == "admin") {
+          Navigator.pushReplacementNamed(context, '/adminPanel');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User data not found!')),
+        );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login Failed: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

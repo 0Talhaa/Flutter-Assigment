@@ -1,17 +1,14 @@
 import 'package:assigment/addProduct.dart';
 import 'package:assigment/admin.dart';
 import 'package:assigment/authentication.dart';
+import 'package:assigment/mywallte.dart';
 import 'package:assigment/productdetial.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:flutter/material.dart';
-
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'firebase_options.dart'; // Auto-generated when setting up Firebase
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,18 +24,27 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'ShoesHub',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.purple,
+          elevation: 4,
+          titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: Colors.black87),
+          bodyMedium: TextStyle(color: Colors.black54),
+        ),
       ),
       debugShowCheckedModeBanner: false,
-      home: BottomNavBar(),
+      home: AuthWrapper(),
       routes: {
-        '/home': (context) => MyApp(), 
-          '/adminPanel': (context) => AdminPanel(),
-          '/signup': (context) => SignupPage(),
-          '/login': (context) => LoginPage(),
+        '/home': (context) => MyApp(),
+        '/adminPanel': (context) => AdminPanel(),
+        '/signup': (context) => SignupPage(),
+        '/login': (context) => LoginPage(),
       },
     );
   }
@@ -58,25 +64,21 @@ class _BottomNavBarState extends State<BottomNavBar> {
     const HomeScreen(),
     const Center(child: Text('Cart Screen', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Message Screen', style: TextStyle(fontSize: 24))),
-    const Center(child: Text('User Screen', style: TextStyle(fontSize: 24))),
+    const Center(child: Text('User  Screen', style: TextStyle(fontSize: 24))),
   ];
 
   void _onItemTapped(int index) {
     if (index == 3) {
-      // Check if User button is pressed
       Navigator.push(
         context,
-        MaterialPageRoute(
-            builder: (context) => LoginPage()), // Navigate to LoginPage
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } else {
       setState(() {
-        _selectedIndex = index; // Update index for other tabs
+        _selectedIndex = index;
       });
     }
   }
-
-  Color _fabColor = Colors.blue; // Default color
 
   @override
   Widget build(BuildContext context) {
@@ -84,47 +86,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(
-                Icons.home,
-                color: Color.fromARGB(255, 222, 62, 250),
-              ),
-              label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(
-                Icons.shopping_cart,
-                color: Color.fromARGB(255, 222, 62, 250),
-              ),
-              label: 'Cart'),
-          BottomNavigationBarItem(
-              icon: Icon(
-                Icons.message,
-                color: Color.fromARGB(255, 222, 62, 250),
-              ),
-              label: 'Messages'),
-          BottomNavigationBarItem(
-              icon: Icon(
-                Icons.person,
-                color: Color.fromARGB(255, 222, 62, 250),
-              ),
-              label: 'User'),
+              icon: Icon(Icons.shopping_cart), label: 'Cart'),
+          BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'User '),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
+        selectedItemColor: Colors.purple,
+        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
-      ),
-      floatingActionButton: MouseRegion(
-        onEnter: (_) =>
-            setState(() => _fabColor = Colors.green), // Change color on hover
-        onExit: (_) => setState(
-            () => _fabColor = Colors.blue), // Revert color when not hovering
-        child: FloatingActionButton(
-          onPressed: () {
-            // Your button action here
-          },
-          backgroundColor: _fabColor, // Dynamic color
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
       ),
     );
   }
@@ -138,12 +109,68 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomepageState extends State<HomeScreen> {
+  String userName = "Loading...";
+  String userEmail = "Loading...";
   CollectionReference products =
       FirebaseFirestore.instance.collection('Products');
+
+  TextEditingController searchController = TextEditingController();
+  String searchQuery = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserDetails();
+  }
+
+  Future<void> _getUserDetails() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (userDoc.exists) {
+          setState(() {
+            userName = userDoc['username'] ?? "No Name";
+            userEmail = userDoc['email'] ?? "No Email";
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetching user details: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text("Home Page")),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(userName),
+              accountEmail: Text(userEmail),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 40, color: Colors.purple),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.logout),
+              title: Text("Logout"),
+              onTap: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+            ),
+          ],
+        ),
+      ),
       backgroundColor: Colors.grey[200],
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -155,29 +182,20 @@ class _HomepageState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'SHOPIN',
+                  'SHOESHUB',
                   style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.purple),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add, color: Colors.purple),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AddProduct()),
-                    );
-                  },
                 ),
               ],
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: searchController,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search),
-                hintText: 'Search',
+                hintText: 'Search Products',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -185,6 +203,11 @@ class _HomepageState extends State<HomeScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value.toLowerCase();
+                });
+              },
             ),
             const SizedBox(height: 16),
             Row(
@@ -192,7 +215,7 @@ class _HomepageState extends State<HomeScreen> {
               children: [
                 const Text('New Arrivals',
                     style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 TextButton(onPressed: () {}, child: const Text('View All')),
               ],
             ),
@@ -200,29 +223,47 @@ class _HomepageState extends State<HomeScreen> {
             StreamBuilder<QuerySnapshot>(
               stream: products.snapshots(),
               builder: (context, snapshot) {
-                print(snapshot.data!.docs.length);
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text('No products available.'));
                 }
-                return SizedBox(
-                  height: 250,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var product = snapshot.data!.docs[index];
-                      return _premiumProductCard(
-                        context,
-                        product['Title'],
-                        product['Price'].toString(),
-                        product['Picture'],
-                        product['Color'],
-                      );
-                    },
+
+                // سرچ فلٹر کریں
+                var filteredProducts = snapshot.data!.docs.where((doc) {
+                  String title = doc['Title'].toString().toLowerCase();
+                  return title.contains(searchQuery);
+                }).toList();
+
+                if (filteredProducts.isEmpty) {
+                  return const Center(
+                      child: Text('No matching products found.'));
+                }
+
+                double screenWidth = MediaQuery.of(context).size.width;
+                int crossAxisCount = screenWidth > 600 ? 3 : 2;
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.7,
                   ),
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    var product = filteredProducts[index];
+                    return _premiumProductCard(
+                      context,
+                      product['Title'],
+                      product['Price'].toString(),
+                      product['Picture'],
+                      product['Color'],
+                    );
+                  },
                 );
               },
             ),
@@ -233,7 +274,13 @@ class _HomepageState extends State<HomeScreen> {
   }
 }
 
-Widget _premiumProductCard(BuildContext context, String title, String price, String imageUrl, String color,  ) {
+Widget _premiumProductCard(
+  BuildContext context,
+  String title,
+  String price,
+  String imageUrl,
+  String color,
+) {
   return Container(
     width: 170,
     margin: const EdgeInsets.only(right: 16),
@@ -269,7 +316,8 @@ Widget _premiumProductCard(BuildContext context, String title, String price, Str
             errorBuilder: (context, error, stackTrace) => Container(
               height: 120,
               color: Colors.grey[300],
-              child: const Icon(Icons.image_not_supported, size: 60, color: Colors.grey),
+              child: const Icon(Icons.image_not_supported,
+                  size: 60, color: Colors.grey),
             ),
           ),
         ),
@@ -319,14 +367,14 @@ Widget _premiumProductCard(BuildContext context, String title, String price, Str
                           price: price,
                           imageUrl: imageUrl,
                           color: color,
-                           productDescription: null, 
-                           productStock: null,
-                           
+                          productDescription: null,
+                          productStock: null,
                         ),
                       ),
                     );
                   },
-                  child: const Text('View Details', style: TextStyle(fontSize: 14)),
+                  child: const Text('View Details',
+                      style: TextStyle(fontSize: 14)),
                 ),
               ),
             ],
@@ -335,4 +383,22 @@ Widget _premiumProductCard(BuildContext context, String title, String price, Str
       ],
     ),
   );
+}
+
+class AuthWrapper extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasData) {
+          return BottomNavBar();
+        }
+        return LoginPage();
+      },
+    );
+  }
 }
